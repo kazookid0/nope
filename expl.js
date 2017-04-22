@@ -430,7 +430,3 @@ function go() {
         return 1;
     } catch (e) { alert(e); }
 }
-
-window.onload = function () {
-    document.getElementById("clck").innerHTML = '<a href="javascript:go()">go</a>';
-};

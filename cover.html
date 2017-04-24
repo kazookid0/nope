@@ -366,15 +366,19 @@
             <div class="site-wrapper-inner">
                 <div class="cover-container">
                     <div class="inner cover">
-                         <h1 class="cover-heading">WebKit RCE for PS4 4.0x</h1>
-
+                      <script>
+                      var print = function(string) {
+                          document.getElementById("console").innerHTML += string + "\n";
+                      }
+                      </script>
+                         <h1 class="cover-heading">WebKit RCE for 4.0x</h1>
                         <p class="lead">Some experiments with the 4.0x WebKit exploit made by
                             <a href="twitter.com/qwertyoruiopz">@qwertyoruiopz</a>
                         </p>
                         <p class="lead">
                             <a id="click" href="javascript:go()" class="btn btn-lg btn-secondary">Launch</a>
                         </p>
-                        <pre id=console>placeholder</pre>
+                        <pre id=console></pre>
                     </div>
                     <div class="mastfoot">
                         <div class="inner">

